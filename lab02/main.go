@@ -11,7 +11,7 @@ import (
 	"os"
 )
 
-const apiURL = "http://localhost:1234/v1/chat/completions"
+const apiURL = "http://127.0.0.1:1234/v1/chat/completions"
 
 type Message struct {
 	Role    string `json:"role"`
@@ -53,7 +53,7 @@ func buildRequest(model string, messages []Message) []byte {
 	request := RequestBody{
 		Model:       model,
 		Messages:    messages,
-		MaxTokens:   2000,
+		MaxTokens:   500,
 		Temperature: 0.5,
 	}
 	data, err := json.Marshal(request)
@@ -105,19 +105,15 @@ func parseResponse(body []byte) string {
 func chooseModel() string {
 	fmt.Println("Выберите модель:")
 	fmt.Println("1. bonsai-8b")
-	fmt.Println("2. Gemma 4 E2B")
-	fmt.Println("3. Llama-3.2-3B-Instruct-GGUF")
-	fmt.Println("4. Qwen2.5-0.5B-Instruct-GGUF")
-	fmt.Println("5. Qwen3-8B")
+	fmt.Println("2. qwen3-1.7b")
+	fmt.Println("3. Qwen3-8B")
 
 	var choice int
 	fmt.Scan(&choice)
 
 	models := []string{
 		"bonsai-8b",
-		"Gemma 4 E2B",
-		"Llama-3.2-3B-Instruct-GGUF",
-		"Qwen2.5-0.5B-Instruct-GGUF",
+		"qwen/qwen3-1.7b",
 		"ollama/qwen3",
 	}
 	if choice < 1 || choice > len(models) {
