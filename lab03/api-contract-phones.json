@@ -1,0 +1,143 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Сервис по подсчету телефонных номеров",
+    "description": "REST API одной функции: подсчет российских телефонных номеров в текстовом файле (*.txt). Номером считается от 10 до 11 цифр, начинающихся с 7 или 8, в форматах: 8XXXXXXXXXX, +7XXXXXXXXXX, 8 (XXX) XXX-XX-XX, +7 XXX XXX-XX-XX и аналогичных с пробелами и дефисами. Помимо количества, ответ содержит позицию первого найденного номера (индекс символа в файле).",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8080",
+      "description": "Локальный сервер разработки"
+    }
+  ],
+  "paths": {
+    "/phones": {
+      "get": {
+        "summary": "Получить количество телефонных номеров в TXT-файле и позицию первого",
+        "operationId": "getPhoneNumbersInFile",
+        "parameters": [
+          {
+            "name": "filename",
+            "in": "query",
+            "required": true,
+            "description": "Имя TXT-файла из предопределенного набора (например, phones.txt, contacts.txt). Путь и символы '..', '/', '\\' запрещены. Расширение должно быть .txt",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]+\\.txt$",
+              "example": "phones.txt"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Успешный ответ. Возвращается и когда номеров в файле нет (тогда count=0, first_position=-1).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PhonesResponse"
+                },
+                "examples": {
+                  "withPhones": {
+                    "summary": "В файле есть номера",
+                    "value": {
+                      "filename": "phones.txt",
+                      "phones_count": 2,
+                      "first_position": 0
+                    }
+                  },
+                  "noPhones": {
+                    "summary": "Номеров нет",
+                    "value": {
+                      "filename": "contacts.txt",
+                      "phones_count": 0,
+                      "first_position": -1
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Некорректный запрос. Неверный формат имени файла или использование запрещенных символов (пути, точки).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": "invalid_filename",
+                  "message": "Некорректный запрос. Неверный формат имени файла или использование запрещенных символов (пути, точки)."
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Файл с указанным именем не найден в предопределенном наборе.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": "file_not_found",
+                  "message": "Файл с указанным именем не найден в предопределенном наборе."
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "PhonesResponse": {
+        "type": "object",
+        "required": [
+          "filename",
+          "phones_count",
+          "first_position"
+        ],
+        "properties": {
+          "filename": {
+            "type": "string",
+            "description": "Имя проанализированного файла",
+            "example": "phones.txt"
+          },
+          "phones_count": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Количество найденных телефонных номеров",
+            "example": 2
+          },
+          "first_position": {
+            "type": "integer",
+            "minimum": -1,
+            "description": "Позиция первого найденного номера (индекс первого символа в файле, начиная с 0). -1, если номеров нет.",
+            "example": 0
+          }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "required": [
+          "error",
+          "message"
+        ],
+        "properties": {
+          "error": {
+            "type": "string",
+            "description": "Машиночитаемый код ошибки",
+            "example": "invalid_filename"
+          },
+          "message": {
+            "type": "string",
+            "description": "Человекочитаемое описание ошибки",
+            "example": "Некорректный запрос. Неверный формат имени файла или использование запрещенных символов (пути, точки)."
+          }
+        }
+      }
+    }
+  }
+}

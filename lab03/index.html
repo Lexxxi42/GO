@@ -1,0 +1,272 @@
+
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		<title>lab03: Go Coverage Report</title>
+		<style>
+			body {
+				background: black;
+				color: rgb(80, 80, 80);
+			}
+			body, pre, #legend span {
+				font-family: Menlo, monospace;
+				font-weight: bold;
+			}
+			#topbar {
+				background: black;
+				position: fixed;
+				top: 0; left: 0; right: 0;
+				height: 42px;
+				border-bottom: 1px solid rgb(80, 80, 80);
+			}
+			#content {
+				margin-top: 50px;
+			}
+			#nav, #legend {
+				float: left;
+				margin-left: 10px;
+			}
+			#legend {
+				margin-top: 12px;
+			}
+			#nav {
+				margin-top: 10px;
+			}
+			#legend span {
+				margin: 0 5px;
+			}
+			.cov0 { color: rgb(192, 0, 0) }
+.cov1 { color: rgb(128, 128, 128) }
+.cov2 { color: rgb(116, 140, 131) }
+.cov3 { color: rgb(104, 152, 134) }
+.cov4 { color: rgb(92, 164, 137) }
+.cov5 { color: rgb(80, 176, 140) }
+.cov6 { color: rgb(68, 188, 143) }
+.cov7 { color: rgb(56, 200, 146) }
+.cov8 { color: rgb(44, 212, 149) }
+.cov9 { color: rgb(32, 224, 152) }
+.cov10 { color: rgb(20, 236, 155) }
+
+		</style>
+	</head>
+	<body>
+		<div id="topbar">
+			<div id="nav">
+				<select id="files">
+				
+				<option value="file0">lab03/main.go (66.7%)</option>
+				
+				<option value="file1">lab03/phones.go (85.2%)</option>
+				
+				</select>
+			</div>
+			<div id="legend">
+				<span>not tracked</span>
+			
+				<span class="cov0">not covered</span>
+				<span class="cov8">covered</span>
+			
+			</div>
+		</div>
+		<div id="content">
+		
+		<pre class="file" id="file0" style="display: none">package main
+
+import (
+        "encoding/json"
+        "log"
+        "net/http"
+        "os"
+        "regexp"
+
+        "github.com/gorilla/mux"
+)
+
+// fileNameRe — разрешённое имя файла. По контракту: латиница/цифры/_/- и строго .html.
+// Никаких путей, слэшей и точек — иначе можно вычитать что попало за пределами набора.
+var fileNameRe = regexp.MustCompile(`^[A-Za-z0-9_-]+\.html$`)
+
+// linkRe ищет открывающий тег &lt;a&gt; с внешним href (http:// или https://).
+// Закрывающий &lt;/a&gt; не проверяем: контракт велит считать по открывающему тегу.
+// Здесь хитро, но работает — регулярка жадная до href, остальное ей неважно.
+var linkRe = regexp.MustCompile(`&lt;a\s+[^&gt;]*href="https?://[^"]*"`)
+
+// writeJSON сериализует body в JSON и пишет в response.
+// input: w — ответ, code — HTTP-код, body — данные (map или struct)
+// output: JSON в теле ответа
+func writeJSON(w http.ResponseWriter, code int, body any) {
+        <span class="cov8" title="1">w.Header().Set("Content-Type", "application/json")
+        w.WriteHeader(code)
+        if err := json.NewEncoder(w).Encode(body); err != nil </span>{
+                <span class="cov0" title="0">log.Println("Ошибка записи JSON:", err)
+</span>        }
+}
+
+// countExternalLinks считает внешние ссылки в HTML-файле.
+// input: filename — имя файла из предопределённого набора
+// output: количество внешних ссылок (int)
+func countExternalLinks(filename string) int {
+        <span class="cov8" title="1">file, err := os.ReadFile(filename)
+        if err != nil </span>{
+                // сюда не дойдём: хендлер заранее проверил файл и вернул 404
+                <span class="cov0" title="0">log.Fatal("Не удалось прочитать файл: " + filename)
+</span>        }
+        <span class="cov8" title="1">return len(linkRe.FindAllString(string(file), -1))</span>
+}
+
+// getAHrefsCounts — GET /a_count?filename=page1.html
+// Возможные ответы: 200 (количество ссылок), 400 (плохое имя), 404 (файла нет).
+func getAHrefsCounts(w http.ResponseWriter, r *http.Request) {
+        <span class="cov8" title="1">filename := r.URL.Query().Get("filename")
+</span>
+        // невалидное имя — сразу отбой, даже не смотрим на диск
+        <span class="cov8" title="1">if !fileNameRe.MatchString(filename) </span>{
+                <span class="cov8" title="1">writeJSON(w, http.StatusBadRequest, map[string]string{
+                        "error":   "invalid_filename",
+                        "message": "Некорректный запрос. Неверный формат имени файла или использование запрещенных символов (пути, точки).",
+                })
+                return
+</span>        }
+
+        // файл есть? если нет — 404 по контракту
+        <span class="cov8" title="1">if _, err := os.Stat(filename); err != nil </span>{
+                <span class="cov8" title="1">writeJSON(w, http.StatusNotFound, map[string]string{
+                        "error":   "file_not_found",
+                        "message": "Файл с указанным именем не найден в предопределенном наборе.",
+                })
+                return
+</span>        }
+
+        <span class="cov8" title="1">writeJSON(w, http.StatusOK, map[string]any{
+                "filename":             filename,
+                "external_links_count": countExternalLinks(filename),
+        })</span>
+}
+
+func main() {
+        <span class="cov0" title="0">r := mux.NewRouter()
+        r.HandleFunc("/a_count", getAHrefsCounts).Methods(http.MethodGet)
+        r.HandleFunc("/phones", getPhonesCount).Methods(http.MethodGet)
+</span>
+        <span class="cov0" title="0">log.Println("Сервер запущен на :8080")
+        log.Fatal(http.ListenAndServe(":8080", r))
+</span>}</pre>
+		
+		<pre class="file" id="file1" style="display: none">package main
+
+import (
+        "log"
+        "net/http"
+        "os"
+        "regexp"
+)
+
+// txtNameRe — то же ограничение, что и для html, но расширение должно быть .txt.
+var txtNameRe = regexp.MustCompile(`^[A-Za-z0-9_-]+\.txt$`)
+
+// phoneRe ищет российский телефон: 8 или +7, дальше 10 цифр, между которыми
+// могут стоять пробелы, скобки и дефисы: 8 (912) 345-67-89, +7 922 111-22-33.
+// Границы (чтобы не схватить кусок длинного числа) проверяем отдельно — см.
+// isValidPhoneMatch, потому что в Go regexp нет lookahead/lookbehind.
+var phoneRe = regexp.MustCompile(`(?:8|\+7)[\s(-]*\d{3}[\s)-]*\d{3}[\s-]*\d{2}[\s-]*\d{2}`)
+
+// isDigitByte — это цифра?
+func isDigitByte(c byte) bool {
+        <span class="cov8" title="1">return c &gt;= '0' &amp;&amp; c &lt;= '9'
+</span>}
+
+// isValidPhoneMatch проверяет, что вокруг номера нет других цифр. Иначе это
+// кусок длинного числа вроде 123456789012345, а не телефон.
+// input: text — весь файл, start/end — границы найденного совпадения
+// output: true, если по соседству нет цифр
+func isValidPhoneMatch(text string, start, end int) bool {
+        <span class="cov8" title="1">if start &gt; 0 &amp;&amp; isDigitByte(text[start-1]) </span>{
+                <span class="cov0" title="0">return false
+</span>        }
+        <span class="cov8" title="1">if end &lt; len(text) &amp;&amp; isDigitByte(text[end]) </span>{
+                <span class="cov0" title="0">return false
+</span>        }
+        <span class="cov8" title="1">return true</span>
+}
+
+// getPhonesCount — GET /phones?filename=phones.txt
+// Работает как /a_count, но по .txt и считает телефоны.
+// Ответ: filename, phones_count и first_position (позиция первого номера, -1 если нет).
+func getPhonesCount(w http.ResponseWriter, r *http.Request) {
+        <span class="cov8" title="1">filename := r.URL.Query().Get("filename")
+</span>
+        <span class="cov8" title="1">if !txtNameRe.MatchString(filename) </span>{
+                <span class="cov8" title="1">writeJSON(w, http.StatusBadRequest, map[string]string{
+                        "error":   "invalid_filename",
+                        "message": "Некорректный запрос. Неверный формат имени файла или использование запрещенных символов (пути, точки).",
+                })
+                return
+</span>        }
+
+        <span class="cov8" title="1">if _, err := os.Stat(filename); err != nil </span>{
+                <span class="cov8" title="1">writeJSON(w, http.StatusNotFound, map[string]string{
+                        "error":   "file_not_found",
+                        "message": "Файл с указанным именем не найден в предопределенном наборе.",
+                })
+                return
+</span>        }
+
+        // читаем файл один раз, позиции считаем по этой строке
+        <span class="cov8" title="1">file, err := os.ReadFile(filename)
+        if err != nil </span>{
+                <span class="cov0" title="0">log.Fatal("Не удалось прочитать файл: " + filename)
+</span>        }
+        <span class="cov8" title="1">text := string(file)
+</span>
+        // ищем все совпадения, но в счёт идут только с "чистыми" границами
+        <span class="cov8" title="1">matches := phoneRe.FindAllStringIndex(text, -1)
+        count := 0
+        firstPosition := -1
+        for _, m := range matches </span>{
+                <span class="cov8" title="1">if !isValidPhoneMatch(text, m[0], m[1]) </span>{
+                        <span class="cov0" title="0">continue</span>
+                }
+                <span class="cov8" title="1">if firstPosition == -1 </span>{
+                        <span class="cov8" title="1">firstPosition = m[0]
+</span>                }
+                <span class="cov8" title="1">count++</span>
+        }
+
+        <span class="cov8" title="1">writeJSON(w, http.StatusOK, map[string]any{
+                "filename":       filename,
+                "phones_count":   count,
+                "first_position": firstPosition,
+        })</span>
+}</pre>
+		
+		</div>
+	</body>
+	<script>
+	(function() {
+		var files = document.getElementById('files');
+		var visible;
+		files.addEventListener('change', onChange, false);
+		function select(part) {
+			if (visible)
+				visible.style.display = 'none';
+			visible = document.getElementById(part);
+			if (!visible)
+				return;
+			files.value = part;
+			visible.style.display = 'block';
+			location.hash = part;
+		}
+		function onChange() {
+			select(files.value);
+			window.scrollTo(0, 0);
+		}
+		if (location.hash != "") {
+			select(location.hash.substr(1));
+		}
+		if (!visible) {
+			select("file0");
+		}
+	})();
+	</script>
+</html>

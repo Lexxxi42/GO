@@ -1,0 +1,134 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Сервис по подсчету гиперссылок",
+    "description": "REST API одной функции по подсчету внешних гиперссылок в HTML-файле. Внешней считается гиперссылка `<a href=\"...\">`, значение href которой начинается с http:// или https://. Ссылки mailto:, tel:, относительные пути и прочие схемы игнорируются. Незакрытые теги `<a>` (без `</a>`) учитываются по наличию открывающего тега с корректным href.",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8080",
+      "description": "Локальный сервер разработки"
+    }
+  ],
+  "paths": {
+    "/a_count": {
+      "get": {
+        "summary": "Получить количество внешних гиперссылок в HTML-файле",
+        "operationId": "getHyperLinks",
+        "parameters": [
+          {
+            "name": "filename",
+            "in": "query",
+            "required": true,
+            "description": "Имя HTML-файла из предопределенного набора (например, page1.html, page2.html, page3.html). Путь и символы '..', '/', '\\' запрещены. Расширение должно быть .html",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]+\\.html$",
+              "example": "page1.html"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Успешный ответ с количеством гиперссылок. Возвращается и в случаях, когда в файле нет тегов <a>, нет внешних ссылок или есть незакрытые теги <a>.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LinkCountResponse"
+                },
+                "examples": {
+                  "fileFromTask": {
+                    "summary": "Файл из задания",
+                    "value": {
+                      "filename": "page1.html",
+                      "external_links_count": 1
+                    }
+                  },
+                  "noLinks": {
+                    "summary": "Файл без ссылок",
+                    "value": {
+                      "filename": "page2.html",
+                      "external_links_count": 0
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Некорректный запрос. Неверный формат имени файла или использование запрещенных символов (пути, точки).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": "invalid_filename",
+                  "message": "Некорректный запрос. Неверный формат имени файла или использование запрещенных символов (пути, точки)."
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Файл с указанным именем не найден в предопределенном наборе.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": "file_not_found",
+                  "message": "Файл с указанным именем не найден в предопределенном наборе."
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "LinkCountResponse": {
+        "type": "object",
+        "required": [
+          "filename",
+          "external_links_count"
+        ],
+        "properties": {
+          "filename": {
+            "type": "string",
+            "description": "Имя проанализированного файла",
+            "example": "page1.html"
+          },
+          "external_links_count": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Количество валидных внешних ссылок (http:// или https://)",
+            "example": 1
+          }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "required": [
+          "error",
+          "message"
+        ],
+        "properties": {
+          "error": {
+            "type": "string",
+            "description": "Машиночитаемый код ошибки",
+            "example": "invalid_filename"
+          },
+          "message": {
+            "type": "string",
+            "description": "Человекочитаемое описание ошибки",
+            "example": "Некорректный запрос. Неверный формат имени файла или использование запрещенных символов (пути, точки)."
+          }
+        }
+      }
+    }
+  }
+}
